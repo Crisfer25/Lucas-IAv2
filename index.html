@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Lucas IA </title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #121212; color: white; text-align: center; padding: 30px; }
+    input, button { padding: 12px; font-size: 16px; margin: 10px; border-radius: 8px; border: none; }
+    input { width: 80%; max-width: 500px; background: #1e1e1e; color: white; }
+    button { background: #00c853; color: white; cursor: pointer; }
+    button:disabled { background: #555; cursor: not-allowed; }
+    pre { white-space: pre-wrap; text-align: left; margin-top: 20px; background: #1e1e1e; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto; min-height: 100px; }
+    .doble-click-aviso {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: -8px;
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+    
+  </style>
+</head>
+<body>
+  <h1>Lucas IA </h1>
+  <input type="text" id="pregunta" placeholder="Haz tu pregunta...">
+  <br>
+  <button id="btnPreguntar">Preguntar</button>
+  <button id="btnDetener" disabled>Detener</button>
+  
+  <pre id="respuesta">Esperando tu pregunta...</pre>
+
+  <script>
+    const API_KEY = "AIzaSyBsZT8gQezPI6IlRqjCXKnY7JGQ_kec2z8";
+    const btn = document.getElementById("btnPreguntar");
+    const btnDetener = document.getElementById("btnDetener");
+    const input = document.getElementById("pregunta");
+    const respuestaEl = document.getElementById("respuesta");
+
+    let detenerEscritura = false; // Control para detener la animación
+
+    // Función para mostrar texto con efecto de escritura
+    async function escribirConEfecto(texto) {
+      respuestaEl.textContent = "";
+      detenerEscritura = false;
+      btnDetener.disabled = false;  // Activamos botón de detener
+
+      for (let i = 0; i < texto.length; i++) {
+        if (detenerEscritura) {
+          // Si piden detener, ponemos el texto completo y salimos
+          respuestaEl.textContent = texto;
+          break;
+        }
+        respuestaEl.textContent += texto.charAt(i);
+        await new Promise(r => setTimeout(r, 30)); // velocidad de escritura (30 ms por letra)
+      }
+
+      btnDetener.disabled = true; // Desactivamos botón al terminar
+    }
+
+    async function pedirRespuesta(pregunta) {
+      if (!pregunta) {
+        respuestaEl.textContent = "Escribe una pregunta, no seas tímido.";
+        btn.disabled = false;
+        return;
+      }
+
+      const preguntaMinus = pregunta.toLowerCase();
+      const quienCreoPreguntas = [
+        "quién te creó",
+        "quien te creo",
+        "quién te hizo",
+        "quien te hizo",
+        "quién te creó?",
+        "quién te creó.",
+        "quién te programó",
+        "quién te programo",
+        "quién te diseñó",
+        "quién te diseño"
+      ];
+
+      if (quienCreoPreguntas.some(frase => preguntaMinus.includes(frase))) {
+        const respuestaPersonalizada = "Fui creado por Cristian Andrés Fernández Quintana, un joven visionario apasionado por la informática y el desarrollo de inteligencia artificial. Él me diseñó con dedicación y creatividad, combinando el conocimiento del pasado con la innovación del futuro para construir una herramienta capaz de aprender, adaptarse y ayudar a quienes me consultan. Soy el resultado de un sueño tecnológico hecho realidad, con la misión de ser un aliado confiable en el vasto universo digital.";
+        await escribirConEfecto(respuestaPersonalizada);
+        btn.disabled = false;
+        return;
+      }
+
+      respuestaEl.textContent = "Lucas está procesando...";
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: pregunta }] }]
+          })
+        });
+
+        const data = await res.json();
+        const texto = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (texto) {
+          await escribirConEfecto(texto);
+        } else {
+          respuestaEl.textContent = "Lucas no encontró una respuesta clara.";
+        }
+      } catch (err) {
+        respuestaEl.textContent = "Error de conexión: " + err.message;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    btn.addEventListener("click", () => {
+      const pregunta = input.value.trim();
+      pedirRespuesta(pregunta);
+      input.value = ""; // Limpiar input después de enviar la pregunta
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const pregunta = input.value.trim();
+        pedirRespuesta(pregunta);
+        input.value = ""; // Limpiar input después de enviar con Enter
+      }
+    });
+
+    btnDetener.addEventListener("click", () => {
+      detenerEscritura = true;  // Marca para detener la animación
+      btnDetener.disabled = true; // Desactiva el botón después de usarlo
+    });
+  </script>
+</body>
+</html>
